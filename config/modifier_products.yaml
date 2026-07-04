@@ -1,0 +1,61 @@
+version: 1
+
+defaults:
+  output_case: lower
+  keep_modifier_rows: false
+  update_description: true
+  merge_delivery_channels: true
+  delivery_channels: [UBER, RAPPI, DIDI]
+
+channel_normalization:
+  strip_regex: '\s+(UBER|RAPPI|DIDI)$'
+  strip_prefix_regex: '^(UBER|RAPPI|DIDI)\s+'
+  exclude_items:
+    - "CAJA 10 CONCHAS UBER"
+    - "CAJA 10 CONCHAS RAPPI"
+    - "CONCHA + CAFE COMBO"
+  exclude_item_regex: '^CAJA \d+ CONCHAS'
+  aliases: {}
+
+products:
+  - id: concha_instore
+    match:
+      item_regex: "^CONCHA (VAINILLA|CHOCOLATE)$"
+    name_template: "concha {flavor_lower}"
+
+  - id: concha_delivery
+    match:
+      item_regex: "^CONCHA (UBER|RAPPI)$"
+    defining_modifiers:
+      - { match_modifier: "VAINILLA", clave_platillo: MA007 }
+      - { match_modifier: "CHOCOLATE", clave_platillo: MA008 }
+    name_template: "concha {modifier_lower}"
+
+  - id: cafe_refill
+    match:
+      item: "CAFE REFILL"
+    defining_modifiers:
+      - { match_modifier: "REGULAR", clave_platillo: MB002 }
+      - { match_modifier: "DESCAFEINADO", clave_platillo: MB021 }
+    name_template: "cafe refill {modifier_lower}"
+
+  - id: chilaquiles_panem
+    match:
+      item_regex: "^CHILAQUILES PANEM( (UBER|RAPPI|DIDI))?$"
+    defining_modifiers:
+      - { match_modifier: "SALSA VERDE", clave_platillo: MA002 }
+      - { match_modifier: "SALSA ROJA", clave_platillo: MA001 }
+      - { match_modifier: "MIXTOS", clave_platillo: MA011 }
+      - { match_modifier: "Salsa Morita", clave_platillo: MOD45 }
+      - { match_modifier: "SALSA ENCHILADAS", clave_platillo: SENCHI }
+    exclude_modifiers:
+      - { clave_platillo: HCNT }
+      - { clave_platillo: MA004 }
+      - { clave_platillo: MOD021 }
+    multi_defining_policy: first
+    name_template: "chilaquiles panem {modifier_lower}"
+
+  - id: delivery_passthrough
+    match:
+      item_regex: ".+ (UBER|RAPPI|DIDI)$"
+    name_template: "{item_lower}"

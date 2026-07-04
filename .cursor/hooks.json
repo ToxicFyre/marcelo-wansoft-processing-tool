@@ -1,0 +1,18 @@
+{
+    "version": 1,
+    "hooks": {
+      "afterFileEdit": [
+        {
+          "command": "bash .cursor/hooks/quality_gate.sh",
+          "timeout": 900
+        }
+      ],
+      "afterTabFileEdit": [
+        {
+          "command": "bash .cursor/hooks/format_only.sh",
+          "timeout": 120
+        }
+      ]
+    }
+  }
+  

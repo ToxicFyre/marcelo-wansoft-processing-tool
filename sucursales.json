@@ -1,0 +1,69 @@
+{
+  "Kavia": {
+    "code": "8777",
+    "valid_from": "2024-02-21",
+    "valid_to": null
+  },
+  "Kavia_OLD": {
+    "code": "6161",
+    "valid_from": "2022-09-20",
+    "valid_to": "2024-02-20"
+  },
+
+  "QIN": {
+    "code": "6190",
+    "valid_from": "2024-02-21",
+    "valid_to": null
+  },
+  "QIN_OLD": {
+    "code": "5979",
+    "valid_from": "2022-04-28",
+    "valid_to": "2024-02-20"
+  },
+
+  "Carreta": {
+    "code": "8771",
+    "valid_from": "2024-01-15",
+    "valid_to": null
+  },
+  "Carreta_OLD": {
+    "code": "5770",
+    "valid_from": "2022-02-21",
+    "valid_to": "2024-01-15"
+  },
+
+  "Zambrano": {
+    "code": "8772",
+    "valid_from": "2024-01-15",
+    "valid_to": null
+  },
+  "Zambrano_OLD": {
+    "code": "6010",
+    "valid_from": "2022-05-10",
+    "valid_to": "2024-01-14"
+  },
+
+  "Punto Valle": {
+    "code": "5731",
+    "valid_from": "2022-02-01",
+    "valid_to": null
+  },
+
+  "Nativa": {
+    "code": "6189",
+    "valid_from": "2024-04-25",
+    "valid_to": null
+  },
+
+  "CrediClub": {
+    "code": "10075",
+    "valid_from": "2024-11-20",
+    "valid_to": null
+  },
+
+  "CEDIS": {
+    "code": "5392",
+    "valid_from": null,
+    "valid_to": null
+  }
+}
