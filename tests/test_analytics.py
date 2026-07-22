@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pandas as pd
+
 from wansoft_tool.enrichment import enrich_detail
 from wansoft_tool.modifier_config import load_modifier_config
 from wansoft_tool.sales_analytics import aggregate_by_item, pareto_80_20
@@ -43,3 +45,21 @@ def test_channel_merge_increases_canonical_revenue() -> None:
     merged_items = aggregate_by_item(merged)["item"].nunique()
     separate_items = aggregate_by_item(separate)["item"].nunique()
     assert merged_items <= separate_items
+
+
+def test_ticket_count_does_not_merge_reused_order_ids() -> None:
+    frame = pd.DataFrame(
+        {
+            "sucursal": ["A", "A", "B"],
+            "operating_date": ["2026-01-01", "2026-01-02", "2026-01-01"],
+            "order_id": [7, 7, 7],
+            "item": ["cafe", "cafe", "cafe"],
+            "is_modifier": [False, False, False],
+            "quantity": [1, 1, 1],
+            "subtotal_item": [10.0, 10.0, 10.0],
+        }
+    )
+
+    agg = aggregate_by_item(frame)
+
+    assert agg.loc[0, "ticket_count"] == 3

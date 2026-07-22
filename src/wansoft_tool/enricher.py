@@ -28,6 +28,7 @@ from wansoft_tool.detail_columns import normalize_detail_columns, sort_detail_ro
 from wansoft_tool.linker import link_ticket_modifiers
 from wansoft_tool.modifier_config import ModifierConfig, ProductRule, find_product_rule
 from wansoft_tool.name_helpers import extract_concha_flavor, to_output_case
+from wansoft_tool.ticket_identity import ticket_key
 
 
 def _first_modifier(modifiers: list[str]) -> str:
@@ -79,7 +80,7 @@ def link_and_enrich_items(
     work = sort_detail_rows(normalize_detail_columns(df))
     drop_all: set[int] = set()
     enriched_names: dict[int, str] = {}
-    grouped = work.groupby(["sucursal", "order_id"], sort=False)
+    grouped = work.groupby(ticket_key(work), sort=False)
     for _, ticket_df in grouped:
         pending, drops = link_ticket_modifiers(ticket_df, config)
         drop_all.update(drops)
