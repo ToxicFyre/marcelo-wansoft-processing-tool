@@ -134,11 +134,27 @@ def _wilson_lower(successes: int, trials: int, confidence_level: float) -> float
     return (center - spread) / (1 + z_squared / trials)
 
 
-def _directional_row(
-    antecedent: str,
-    consequent: str,
+def _is_eligible(
+    counts: tuple[int, int],
+    thresholds: tuple[int, int],
+    lift: float,
+    leverage: float,
+    lower: float,
+    base_rate: float,
+) -> bool:
+    antecedent_n, co_n = counts
+    min_anchor, min_pair = thresholds
+    return (
+        antecedent_n >= min_anchor
+        and co_n >= min_pair
+        and lift > 1.0
+        and leverage > 0.0
+        and lower > base_rate
+    )
+
+
+def _rule_metrics(
     counts: tuple[int, int, int, int],
-    period: tuple[str, str],
     thresholds: tuple[int, int, float],
 ) -> dict[str, object]:
     total, antecedent_n, consequent_n, co_n = counts
@@ -150,18 +166,15 @@ def _directional_row(
     leverage = support - (antecedent_n / total) * base_rate
     lower = _wilson_lower(co_n, antecedent_n, confidence_level)
     uplift = max(0.0, lower - base_rate)
-    eligible = (
-        antecedent_n >= min_anchor
-        and co_n >= min_pair
-        and lift > 1.0
-        and leverage > 0.0
-        and lower > base_rate
+    eligible = _is_eligible(
+        (antecedent_n, co_n),
+        (min_anchor, min_pair),
+        lift,
+        leverage,
+        lower,
+        base_rate,
     )
     return {
-        "antecedent": antecedent,
-        "consequent": consequent,
-        "period_start": period[0],
-        "period_end": period[1],
         "total_baskets": total,
         "antecedent_tickets": antecedent_n,
         "consequent_tickets": consequent_n,
@@ -177,6 +190,42 @@ def _directional_row(
         "opportunity_score": antecedent_n * uplift,
         "eligible": eligible,
     }
+
+
+def _directional_row(
+    antecedent: str,
+    consequent: str,
+    counts: tuple[int, int, int, int],
+    period: tuple[str, str],
+    thresholds: tuple[int, int, float],
+) -> dict[str, object]:
+    return {
+        "antecedent": antecedent,
+        "consequent": consequent,
+        "period_start": period[0],
+        "period_end": period[1],
+        **_rule_metrics(counts, thresholds),
+    }
+
+
+def _build_rule_rows(
+    item_counts: dict[str, int],
+    pair_counts: dict[tuple[str, str], int],
+    total: int,
+    period: tuple[str, str],
+    thresholds: tuple[int, int, float],
+) -> list[dict[str, object]]:
+    rows = []
+    for (left, right), co_n in pair_counts.items():
+        left_counts = (total, item_counts[left], item_counts[right], co_n)
+        right_counts = (total, item_counts[right], item_counts[left], co_n)
+        rows.append(
+            _directional_row(left, right, left_counts, period, thresholds)
+        )
+        rows.append(
+            _directional_row(right, left, right_counts, period, thresholds)
+        )
+    return rows
 
 
 def association_rules(
@@ -198,26 +247,7 @@ def association_rules(
     pair_floor = min_pair_tickets or max(5, ceil(total * 0.001))
     period = _period(_purchased_lines(df))
     thresholds = (min_anchor_tickets, pair_floor, confidence_level)
-    rows = []
-    for (left, right), co_n in pair_counts.items():
-        rows.append(
-            _directional_row(
-                left,
-                right,
-                (total, item_counts[left], item_counts[right], co_n),
-                period,
-                thresholds,
-            )
-        )
-        rows.append(
-            _directional_row(
-                right,
-                left,
-                (total, item_counts[right], item_counts[left], co_n),
-                period,
-                thresholds,
-            )
-        )
+    rows = _build_rule_rows(item_counts, pair_counts, total, period, thresholds)
     return pd.DataFrame(rows, columns=RULE_COLUMNS).sort_values(
         SORT_COLUMNS, ascending=SORT_ASCENDING, ignore_index=True
     )

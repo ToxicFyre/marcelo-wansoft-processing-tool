@@ -6,7 +6,10 @@ import pandas as pd
 import pytest
 
 from wansoft_tool.cross_selling import association_rules, top_cross_sell_rules
+from wansoft_tool.enrichment import enrich_detail
+from wansoft_tool.modifier_config import load_modifier_config
 from wansoft_tool.ticket_identity import ticket_key
+from tests.helpers import load_raw_integration
 
 
 def _rows(baskets: list[list[str]]) -> pd.DataFrame:
@@ -155,7 +158,10 @@ def test_top_rules_are_deterministic_and_suppress_reverse_pairs() -> None:
         ["opportunity_score", "leverage", "co_tickets", "antecedent", "consequent"],
         ascending=[False, False, False, True, True],
     )
-    pd.testing.assert_frame_equal(top.reset_index(drop=True), expected.reset_index(drop=True))
+    pd.testing.assert_frame_equal(
+        top.reset_index(drop=True),
+        expected.reset_index(drop=True),
+    )
 
 
 def test_product_specific_top_rules_retain_direction() -> None:
@@ -186,3 +192,15 @@ def test_empty_and_missing_columns_have_explicit_contracts() -> None:
 
     with pytest.raises(ValueError, match="subtotal_item"):
         association_rules(pd.DataFrame({"item": ["cafe"], "is_modifier": [False]}))
+
+
+def test_rules_integrate_with_enriched_wansoft_detail() -> None:
+    raw = load_raw_integration()
+    enriched = enrich_detail(raw, load_modifier_config(), merge_delivery=True)
+
+    rules = association_rules(enriched)
+
+    assert not rules.empty
+    assert rules["eligible"].any()
+    assert rules["total_baskets"].nunique() == 1
+    assert rules["period_start"].iloc[0] <= rules["period_end"].iloc[0]
