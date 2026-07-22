@@ -27,11 +27,13 @@ import pandas as pd
 import streamlit as st
 
 from wansoft_tool.bronze_upload import bronze_upload_to_silver
+from wansoft_tool.cross_selling import association_rules
 from wansoft_tool.enrichment import enrich_detail
 from wansoft_tool.sales_analytics import aggregate_by_item
 from wansoft_tool.streamlit_views import (
     init_session_state,
     load_config,
+    render_cross_sell_tab,
     render_download_tab,
     render_pareto_tab,
     render_sidebar,
@@ -92,6 +94,7 @@ def _store_enriched(raw: pd.DataFrame, merge: bool) -> None:
     st.session_state["raw_df"] = raw
     st.session_state["enriched_df"] = enriched
     st.session_state["agg_df"] = aggregate_by_item(enriched)
+    st.session_state["cross_sell_df"] = association_rules(enriched)
 
 
 def _needs_csv_validation(source: str) -> bool:
@@ -140,6 +143,9 @@ def _maybe_refresh_merge(raw: pd.DataFrame, merge: bool) -> pd.DataFrame | None:
         return enriched
     st.session_state["enriched_df"] = _run_enrichment(raw, merge)
     st.session_state["agg_df"] = aggregate_by_item(st.session_state["enriched_df"])
+    st.session_state["cross_sell_df"] = association_rules(
+        st.session_state["enriched_df"]
+    )
     st.session_state["_last_merge"] = merge
     return st.session_state["enriched_df"]
 
@@ -149,17 +155,28 @@ def _render_tabs(enriched: pd.DataFrame, raw: pd.DataFrame, merge: bool) -> None
     agg = st.session_state.get("agg_df")
     if agg is None:
         agg = aggregate_by_item(enriched)
+    rules = st.session_state.get("cross_sell_df")
+    if rules is None:
+        rules = association_rules(enriched)
     tabs = st.tabs(
-        ["Resumen", "Top productos (80/20)", "Detalle enriquecido", "Descargar"]
+        [
+            "Resumen",
+            "Ventas cruzadas",
+            "Top productos (80/20)",
+            "Detalle enriquecido",
+            "Descargar",
+        ]
     )
     with tabs[0]:
         render_summary_tab(enriched, raw)
     with tabs[1]:
-        render_pareto_tab(agg)
+        render_cross_sell_tab(rules)
     with tabs[2]:
-        st.dataframe(enriched, use_container_width=True)
+        render_pareto_tab(agg)
     with tabs[3]:
-        render_download_tab(enriched, agg)
+        st.dataframe(enriched, use_container_width=True)
+    with tabs[4]:
+        render_download_tab(enriched, agg, rules)
 
 
 def _render_upload_widget(source: str) -> None:

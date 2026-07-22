@@ -26,9 +26,11 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from wansoft_tool.cross_selling import top_cross_sell_rules
 from wansoft_tool.excel_export import dataframe_to_excel_bytes
 from wansoft_tool.modifier_config import ModifierConfig, load_modifier_config
 from wansoft_tool.sales_analytics import pareto_80_20
+from wansoft_tool.ticket_identity import ticket_key
 
 # Solo bronze por ahora; añade otras fuentes aquí cuando Marcelo las necesite.
 ENABLED_DATA_SOURCES = ("Subir Excel bronze (manual)",)
@@ -48,6 +50,7 @@ def init_session_state() -> None:
         "raw_df": None,
         "enriched_df": None,
         "agg_df": None,
+        "cross_sell_df": None,
         "merge_delivery": True,
     }
     for key, value in defaults.items():
@@ -91,7 +94,7 @@ def render_summary_tab(enriched: pd.DataFrame, raw: pd.DataFrame) -> None:
     base = enriched.loc[~enriched["is_modifier"].astype(bool)]
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Ingresos totales", f"${base['subtotal_item'].sum():,.2f}")
-    c2.metric("Tickets", base["order_id"].nunique())
+    c2.metric("Tickets", ticket_key(base).nunique())
     c3.metric("Productos únicos", base["item"].nunique())
     c4.metric("Filas enriquecidas", len(enriched))
     if "operating_date" in enriched.columns:
@@ -99,6 +102,98 @@ def render_summary_tab(enriched: pd.DataFrame, raw: pd.DataFrame) -> None:
         st.caption(
             f"Cobertura: {dates.min().date()} — {dates.max().date()} | "
             f"Filas originales: {len(raw)} → enriquecidas: {len(enriched)}"
+        )
+
+
+def _render_rule_card(column, rank: int, rule: pd.Series) -> None:
+    anchor = str(rule["antecedent"])
+    companion = str(rule["consequent"])
+    column.markdown(f"#### {rank}. Cuando compren **{anchor}**")
+    column.write(f"Ofrece **{companion}**")
+    column.metric(
+        "También aparece en",
+        f"{rule['confidence']:.1%} de esos tickets",
+        delta=f"{rule['lift']:.2f}× vs. frecuencia normal",
+    )
+    column.caption(
+        f"Evidencia: {int(rule['co_tickets'])} tickets con ambos · "
+        f"mínimo conservador {rule['confidence_lower_bound']:.1%}"
+    )
+
+
+def _display_cross_sell_table(rules: pd.DataFrame) -> pd.DataFrame:
+    display = rules.copy()
+    display["confianza"] = display["confidence"].map(lambda value: f"{value:.1%}")
+    display["frecuencia base"] = display["base_rate"].map(
+        lambda value: f"{value:.1%}"
+    )
+    display["afinidad"] = display["lift"].map(lambda value: f"{value:.2f}×")
+    display["mínimo conservador"] = display["confidence_lower_bound"].map(
+        lambda value: f"{value:.1%}"
+    )
+    return display.rename(
+        columns={
+            "antecedent": "cuando compran",
+            "consequent": "ofrecer",
+            "co_tickets": "tickets con ambos",
+        }
+    )[
+        [
+            "cuando compran",
+            "ofrecer",
+            "tickets con ambos",
+            "confianza",
+            "frecuencia base",
+            "afinidad",
+            "mínimo conservador",
+        ]
+    ]
+
+
+def _eligible_anchors(rules: pd.DataFrame) -> list[str]:
+    eligible = rules.loc[rules["eligible"].astype(bool)]
+    if eligible.empty:
+        return []
+    ordered = eligible.sort_values(
+        ["antecedent_tickets", "antecedent"], ascending=[False, True]
+    )
+    return ordered["antecedent"].drop_duplicates().tolist()
+
+
+def render_cross_sell_tab(rules: pd.DataFrame) -> None:
+    st.subheader("Ventas cruzadas")
+    st.caption(
+        "Asociaciones históricas confiables entre productos del mismo ticket; "
+        "no demuestran que la oferta causará una compra."
+    )
+    top = top_cross_sell_rules(rules, n=3)
+    if top.empty:
+        st.info(
+            "No hay evidencia suficiente para recomendar ventas cruzadas "
+            "con estos datos."
+        )
+    else:
+        columns = st.columns(3)
+        for rank, (_, rule) in enumerate(top.iterrows(), start=1):
+            _render_rule_card(columns[rank - 1], rank, rule)
+    anchors = _eligible_anchors(rules)
+    if not anchors:
+        return
+    st.divider()
+    selected = st.selectbox("¿Qué ofrecer con este producto?", anchors)
+    selected_rules = top_cross_sell_rules(rules, n=3, antecedent=selected)
+    st.dataframe(
+        _display_cross_sell_table(selected_rules),
+        use_container_width=True,
+        hide_index=True,
+    )
+    with st.expander("Cómo leer estas recomendaciones"):
+        st.markdown(
+            "**Confianza** es la proporción de tickets del producto elegido que "
+            "también incluyen la sugerencia. **Frecuencia base** indica qué tan "
+            "común es la sugerencia en todos los tickets. **Afinidad** compara "
+            "ambas: más de 1× significa que aparecen juntos más de lo esperado. "
+            "El mínimo conservador protege contra coincidencias con pocos datos."
         )
 
 
@@ -129,7 +224,11 @@ def render_pareto_tab(agg: pd.DataFrame) -> None:
             st.dataframe(rest, use_container_width=True)
 
 
-def render_download_tab(enriched: pd.DataFrame, agg: pd.DataFrame) -> None:
+def render_download_tab(
+    enriched: pd.DataFrame,
+    agg: pd.DataFrame,
+    rules: pd.DataFrame,
+) -> None:
     st.subheader("Descargar Excel")
     if enriched.empty:
         st.info("Carga datos primero.")
@@ -144,6 +243,12 @@ def render_download_tab(enriched: pd.DataFrame, agg: pd.DataFrame) -> None:
         "Descargar detalle enriquecido",
         data=dataframe_to_excel_bytes(enriched, "Detalle"),
         file_name="detalle_enriquecido.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    st.download_button(
+        "Descargar ventas cruzadas",
+        data=dataframe_to_excel_bytes(rules, "VentasCruzadas"),
+        file_name="ventas_cruzadas.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
