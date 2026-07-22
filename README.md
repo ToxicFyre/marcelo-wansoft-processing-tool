@@ -1,6 +1,6 @@
 # Herramienta de Detalle de Ventas — Panem
 
-Aplicación para que Marcelo analice **detalle de ventas** de Wansoft: descarga datos, unifica productos (conchas, café refill, chilaquiles, Uber/Rappi/DiDi) y muestra el análisis **80/20** con descarga a Excel.
+Aplicación para que Marcelo analice **detalle de ventas** de Wansoft: descarga datos, unifica productos (conchas, café refill, chilaquiles, Uber/Rappi/DiDi), recomienda **ventas cruzadas** y muestra el análisis **80/20** con descarga a Excel.
 
 ## Inicio rápido (Mac — Marcelo)
 
@@ -57,9 +57,16 @@ Se abrirá en el navegador (por defecto `http://localhost:8501`).
 
 3. **Pestañas**
    - **Resumen**: ingresos, tickets, productos.
+   - **Ventas cruzadas**: tres oportunidades confiables y sugerencias por producto.
    - **Top productos (80/20)**: productos que concentran ~80% de ingresos.
    - **Detalle enriquecido**: tabla completa.
-   - **Descargar**: Excel del resumen 80/20 o del detalle completo.
+   - **Descargar**: Excel de ventas cruzadas, resumen 80/20 o detalle completo.
+
+Las recomendaciones de venta cruzada comparan productos del mismo ticket y
+descartan asociaciones con poca evidencia. “También aparece en 20%” describe
+los datos históricos; no garantiza que ofrecer el producto cause la compra.
+Consulta [el método y sus métricas](docs/CROSS_SELLING_METHOD.md) para interpretar
+confianza, afinidad y el mínimo conservador.
 
 ## Validación (desarrolladores)
 
@@ -68,7 +75,7 @@ pytest
 ruff check src tests --exclude .venv
 ruff format --check src tests --exclude .venv
 mypy src
-archbrace check src
+archbrace check .
 ```
 
 ## Fixtures de prueba

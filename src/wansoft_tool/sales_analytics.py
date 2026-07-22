@@ -22,6 +22,8 @@ from __future__ import annotations
 
 import pandas as pd
 
+from wansoft_tool.ticket_identity import ticket_key
+
 
 def _base_items(df: pd.DataFrame) -> pd.DataFrame:
     if "is_modifier" in df.columns:
@@ -42,10 +44,11 @@ def aggregate_by_item(df: pd.DataFrame) -> pd.DataFrame:
                 "cum_pct",
             ]
         )
+    base["_ticket_key"] = ticket_key(base)
     qty_col = "quantity" if "quantity" in base.columns else None
     grouped = base.groupby("item", as_index=False).agg(
         revenue=("subtotal_item", "sum"),
-        ticket_count=("order_id", "nunique"),
+        ticket_count=("_ticket_key", "nunique"),
         **({"quantity": (qty_col, "sum")} if qty_col else {}),
     )
     if qty_col is None:
