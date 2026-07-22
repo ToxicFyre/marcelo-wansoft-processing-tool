@@ -105,47 +105,59 @@ def render_summary_tab(enriched: pd.DataFrame, raw: pd.DataFrame) -> None:
         )
 
 
+def _rule_card_content(rule: pd.Series) -> dict[str, str]:
+    antecedent_tickets = int(rule["antecedent_tickets"])
+    co_tickets = int(rule["co_tickets"])
+    reliable = " · asociación por encima de lo normal" if bool(rule["eligible"]) else ""
+    return {
+        "confidence_value": f"{rule['confidence']:.1%}",
+        "confidence_detail": f"de esos {antecedent_tickets} tickets",
+        "lift_delta": f"{rule['lift']:.2f}× vs. frecuencia normal",
+        "evidence": (
+            f"Evidencia: {co_tickets} tickets con ambos · "
+            f"piso seguro {rule['confidence_lower_bound']:.1%}{reliable}"
+        ),
+    }
+
+
 def _render_rule_card(column, rank: int, rule: pd.Series) -> None:
     anchor = str(rule["antecedent"])
     companion = str(rule["consequent"])
+    content = _rule_card_content(rule)
     column.markdown(f"#### {rank}. Cuando compren **{anchor}**")
     column.write(f"Ofrece **{companion}**")
     column.metric(
         "También aparece en",
-        f"{rule['confidence']:.1%} de esos tickets",
-        delta=f"{rule['lift']:.2f}× vs. frecuencia normal",
+        content["confidence_value"],
+        delta=content["lift_delta"],
     )
-    column.caption(
-        f"Evidencia: {int(rule['co_tickets'])} tickets con ambos · "
-        f"mínimo conservador {rule['confidence_lower_bound']:.1%}"
-    )
+    column.caption(content["confidence_detail"])
+    column.caption(content["evidence"])
 
 
 def _display_cross_sell_table(rules: pd.DataFrame) -> pd.DataFrame:
     display = rules.copy()
     display["confianza"] = display["confidence"].map(lambda value: f"{value:.1%}")
-    display["frecuencia base"] = display["base_rate"].map(
-        lambda value: f"{value:.1%}"
-    )
+    display["frecuencia base"] = display["base_rate"].map(lambda value: f"{value:.1%}")
     display["afinidad"] = display["lift"].map(lambda value: f"{value:.2f}×")
-    display["mínimo conservador"] = display["confidence_lower_bound"].map(
+    display["piso seguro"] = display["confidence_lower_bound"].map(
         lambda value: f"{value:.1%}"
     )
     return display.rename(
         columns={
-            "antecedent": "cuando compran",
             "consequent": "ofrecer",
+            "antecedent_tickets": "tickets del producto",
             "co_tickets": "tickets con ambos",
         }
     )[
         [
-            "cuando compran",
             "ofrecer",
+            "tickets del producto",
             "tickets con ambos",
             "confianza",
             "frecuencia base",
             "afinidad",
-            "mínimo conservador",
+            "piso seguro",
         ]
     ]
 
@@ -187,13 +199,26 @@ def render_cross_sell_tab(rules: pd.DataFrame) -> None:
         use_container_width=True,
         hide_index=True,
     )
+    st.caption("Confianza = tickets con ambos ÷ tickets del producto.")
     with st.expander("Cómo leer estas recomendaciones"):
         st.markdown(
-            "**Confianza** es la proporción de tickets del producto elegido que "
-            "también incluyen la sugerencia. **Frecuencia base** indica qué tan "
-            "común es la sugerencia en todos los tickets. **Afinidad** compara "
-            "ambas: más de 1× significa que aparecen juntos más de lo esperado. "
-            "El mínimo conservador protege contra coincidencias con pocos datos."
+            "- **Qué significa:** cuando alguien compra el producto elegido, "
+            "históricamente también se lleva la sugerencia en ese porcentaje de "
+            "sus tickets.\n"
+            "- **Tickets del producto, tickets con ambos y confianza:** si hay "
+            "170 tickets con el producto y 17 llevan también la sugerencia, la "
+            "confianza es 10% (17 ÷ 170).\n"
+            "- **Afinidad:** cuántas veces más seguido aparecen juntos frente a "
+            "lo normal. 1× es lo esperado por azar; más de 1× indica que se "
+            "acompañan más de lo esperado.\n"
+            "- **Piso seguro:** es la confianza mínima razonable considerando "
+            "cuántos tickets hay. Si está cerca de la confianza, la evidencia es "
+            "sólida; si baja mucho, hay pocos tickets compartidos y conviene ser "
+            "cauteloso. En las recomendaciones mostradas el piso ya supera la "
+            "frecuencia normal de la sugerencia, así que la pareja no parece "
+            "una coincidencia casual.\n"
+            "- **Recuerda:** describen compras pasadas; no garantizan que "
+            "ofrecer el producto cause la compra."
         )
 
 

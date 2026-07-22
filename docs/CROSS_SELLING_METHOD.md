@@ -61,6 +61,19 @@ una salvaguarda transparente y estable sin agregar una dependencia estadística.
 Si ninguna regla supera los filtros, la interfaz comunica que no hay evidencia
 suficiente; no rellena espacios con recomendaciones débiles.
 
+## Lectura operativa en la app
+
+La interfaz traduce estas métricas a lenguaje de piso de venta:
+
+- La tabla por producto muestra **tickets del producto** (`antecedent_tickets`) y
+  **tickets con ambos** (`co_tickets`) junto a la confianza, para que sea evidente
+  que confianza = tickets con ambos ÷ tickets del producto.
+- El límite inferior de Wilson (`confidence_lower_bound`) se presenta como
+  **piso seguro**: la confianza mínima razonable dada la cantidad de tickets.
+- En las recomendaciones elegibles se añade la etiqueta *asociación por encima de
+  lo normal*, porque el piso seguro ya supera la frecuencia base de la sugerencia;
+  es una forma llana de decir que la pareja no parece coincidencia casual.
+
 ## Orden de las recomendaciones
 
 La puntuación operativa es:

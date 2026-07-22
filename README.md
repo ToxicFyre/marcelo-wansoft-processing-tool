@@ -1,6 +1,6 @@
 # Herramienta de Detalle de Ventas — Panem
 
-Aplicación para que Marcelo analice **detalle de ventas** de Wansoft: descarga datos, unifica productos (conchas, café refill, chilaquiles, Uber/Rappi/DiDi), recomienda **ventas cruzadas** y muestra el análisis **80/20** con descarga a Excel.
+Aplicación para que Marcelo analice **detalle de ventas**: unifica productos (conchas, café refill, chilaquiles, Uber/Rappi/DiDi), recomienda **ventas cruzadas** y muestra el análisis **80/20** con descarga a Excel.
 
 ## Inicio rápido (Mac — Marcelo)
 
@@ -8,14 +8,16 @@ Aplicación para que Marcelo analice **detalle de ventas** de Wansoft: descarga 
 2. Haz **doble clic** en **`INICIAR.command`**.
    - Si macOS dice que no puede abrirlo: clic derecho → **Abrir** → **Abrir** (solo la primera vez).
 3. La primera vez, Terminal instalará Python (si hace falta), las dependencias y abrirá el navegador solo.
-4. Para cerrar la app: vuelve a la ventana de Terminal y presiona **Ctrl+C**.
+4. **Cada vez que abras la app se descarga automáticamente la última versión** publicada en GitHub, así que siempre usas el código más reciente. Necesitas conexión a internet; si estás sin conexión, se usa la copia local que ya tenías.
+5. Para cerrar la app: vuelve a la ventana de Terminal y presiona **Ctrl+C**.
 
-**Incluir en el ZIP para Marcelo:** todo el proyecto **sin** la carpeta `.venv`. Opcional: un `secrets.env` ya configurado con credenciales Wansoft (si usará descarga en vivo).
+> Tus credenciales (`secrets.env`) y el entorno instalado (`.venv/`) **no** se borran al actualizar.
+
+**Incluir en el ZIP para Marcelo:** todo el proyecto **sin** la carpeta `.venv`. No hace falta incluir la carpeta `.git`; `INICIAR.command` conecta con GitHub solo la primera vez que se ejecuta.
 
 ## Requisitos
 
 - Python 3.10 o superior
-- Credenciales Wansoft (solo si usas descarga en vivo)
 
 ## Instalación
 
@@ -24,22 +26,6 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 ```
-
-## Configurar credenciales
-
-```bash
-cp secrets.env.example secrets.env
-```
-
-Edita `secrets.env` con los valores que te proporcione el administrador:
-
-| Variable | Descripción |
-|----------|-------------|
-| `WS_BASE` | URL del POS Wansoft |
-| `WS_USER` | Usuario Wansoft |
-| `WS_PASS` | Contraseña Wansoft |
-
-Si solo subes archivos CSV, no necesitas credenciales.
 
 ## Abrir la aplicación
 
@@ -51,7 +37,7 @@ Se abrirá en el navegador (por defecto `http://localhost:8501`).
 
 ## Cómo usar
 
-1. **Subir Excel**: sube uno o más `Detail_*.xlsx` descargados desde Wansoft (Detalle de Ventas), luego **Cargar datos**. El sistema los limpia y enriquece automáticamente.
+1. **Subir Excel**: sube uno o más `Detail_*.xlsx` (Detalle de Ventas), luego **Cargar datos**. El sistema los limpia y enriquece automáticamente.
 
 2. **Combinar Uber/Rappi/DiDi**: activado por defecto. Une ventas de delivery con el mismo producto de tienda (ej. `CONCHA UBER` + chocolate = `concha chocolate`).
 
@@ -65,8 +51,10 @@ Se abrirá en el navegador (por defecto `http://localhost:8501`).
 Las recomendaciones de venta cruzada comparan productos del mismo ticket y
 descartan asociaciones con poca evidencia. “También aparece en 20%” describe
 los datos históricos; no garantiza que ofrecer el producto cause la compra.
-Consulta [el método y sus métricas](docs/CROSS_SELLING_METHOD.md) para interpretar
-confianza, afinidad y el mínimo conservador.
+La tabla por producto muestra los tickets del producto y los tickets con ambos
+para que la confianza sea intuitiva (confianza = tickets con ambos ÷ tickets del
+producto). Consulta [el método y sus métricas](docs/CROSS_SELLING_METHOD.md) para
+interpretar confianza, afinidad y el piso seguro (mínimo conservador).
 
 ## Validación (desarrolladores)
 
@@ -80,21 +68,15 @@ archbrace check .
 
 ## Fixtures de prueba
 
-Los tests usan CSV reales en `tests/fixtures/`, generados **solo** con descarga
-en vivo desde Wansoft (no copies desde otros repos).
+Los tests usan CSV en `tests/fixtures/`. Para regenerarlos (maintainers):
 
 ```bash
-# Requiere secrets.env válido (WS_BASE, WS_USER, WS_PASS)
 python tests/bootstrap_fixtures.py
-pytest tests/test_fixtures_provenance.py   # verifica procedencia live
+pytest tests/test_fixtures_provenance.py
 ```
-
-Si el bootstrap falla con error de autenticación, corrige `secrets.env` y
-reintenta. **No sustituyas los fixtures por CSV locales** — eso invalida las
-pruebas de regresión.
 
 ## Estructura
 
 - `config/modifier_products.yaml` — reglas de productos (conchas, café, chilaquiles)
 - `src/wansoft_tool/` — lógica de enriquecimiento, análisis y UI
-- `sucursales.json` — códigos de sucursal para Wansoft
+- `sucursales.json` — códigos de sucursal
