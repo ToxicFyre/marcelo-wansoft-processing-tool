@@ -1,0 +1,31 @@
+Si macOS dice que INICIAR.command está "dañado", "roto" o no se puede abrir
+===========================================================================
+
+Eso es normal la primera vez cuando el ZIP llega por WhatsApp, correo o Drive.
+No significa que el archivo esté corrupto: macOS lo bloquea por seguridad.
+
+Haz esto una sola vez:
+
+1. Abre la app Terminal (Cmd + Espacio, escribe Terminal, Enter).
+
+2. Copia y pega esta línea, pero NO pulses Enter todavía:
+
+   xattr -cr
+
+   (deja un espacio después de -cr)
+
+3. Arrastra la carpeta completa de esta herramienta a la ventana de Terminal
+   (se pegará la ruta sola). Luego pulsa Enter.
+
+4. Copia y pega esta otra línea, sin pulsar Enter todavía:
+
+   chmod +x
+
+   (deja un espacio después de +x)
+
+5. Arrastra el archivo INICIAR.command a la ventana de Terminal y pulsa Enter.
+
+6. Vuelve a hacer doble clic en INICIAR.command.
+
+Alternativa (a veces basta):
+- Clic derecho en INICIAR.command → Abrir → Abrir.

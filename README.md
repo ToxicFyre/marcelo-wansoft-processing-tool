@@ -7,13 +7,20 @@ Aplicación para que Marcelo analice **detalle de ventas**: unifica productos (c
 1. Descomprime el ZIP que te enviaron en cualquier carpeta (por ejemplo Escritorio).
 2. Haz **doble clic** en **`INICIAR.command`**.
    - Si macOS dice que no puede abrirlo: clic derecho → **Abrir** → **Abrir** (solo la primera vez).
+   - Si dice que está **dañado / roto** o no tiene permisos: abre **`SI_NO_ABRE.txt`** y sigue esos pasos (es el bloqueo de seguridad de macOS al bajar el ZIP por WhatsApp, correo o Drive; no es un archivo corrupto).
 3. La primera vez, Terminal instalará Python (si hace falta), las dependencias y abrirá el navegador solo.
 4. **Cada vez que abras la app se descarga automáticamente la última versión** publicada en GitHub, así que siempre usas el código más reciente. Necesitas conexión a internet; si estás sin conexión, se usa la copia local que ya tenías.
 5. Para cerrar la app: vuelve a la ventana de Terminal y presiona **Ctrl+C**.
 
 > Tus credenciales (`secrets.env`) y el entorno instalado (`.venv/`) **no** se borran al actualizar.
 
-**Incluir en el ZIP para Marcelo:** todo el proyecto **sin** la carpeta `.venv`. No hace falta incluir la carpeta `.git`; `INICIAR.command` conecta con GitHub solo la primera vez que se ejecuta.
+**Incluir en el ZIP para Marcelo:** todo el proyecto **sin** la carpeta `.venv`. Incluye **`SI_NO_ABRE.txt`**. No hace falta incluir la carpeta `.git`; `INICIAR.command` conecta con GitHub solo la primera vez que se ejecuta.
+
+Forma recomendada de crear el ZIP (conserva el permiso de ejecución de `INICIAR.command`):
+
+```bash
+git archive --format=zip --output=marcelo-tool.zip HEAD
+```
 
 ## Requisitos
 

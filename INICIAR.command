@@ -5,6 +5,15 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Al recibir el ZIP por WhatsApp / Drive / correo, macOS marca los archivos en
+# cuarentena y a veces quita el permiso de ejecución. Gatekeeper entonces dice
+# que el archivo está "dañado" o "roto". Si Terminal logró abrir este script,
+# reparamos la carpeta para los siguientes arranques.
+chmod u+x "$0" 2>/dev/null || true
+if command -v xattr >/dev/null 2>&1; then
+    xattr -dr com.apple.quarantine "$SCRIPT_DIR" 2>/dev/null || true
+fi
+
 pause_on_error() {
     echo ""
     echo "Presiona Enter para cerrar esta ventana..."
@@ -62,6 +71,8 @@ update_from_github() {
         return 0
     fi
     git reset --hard -q "origin/$BRANCH"
+    # git archive / reset restauran el modo 755; WhatsApp/Drive a veces lo vuelven a quitar.
+    chmod u+x "$SCRIPT_DIR/INICIAR.command" 2>/dev/null || true
     echo "   Actualizado a la última versión (main)."
 }
 
